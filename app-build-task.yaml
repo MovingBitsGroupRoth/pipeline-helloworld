@@ -1,12 +1,17 @@
 apiVersion: tekton.dev/v1alpha1
 kind: Task
 metadata:
+   # Der Name des Tasks wird verwendet, um an anderen Stellen auf diesen Task zu verweisen, wie z. B. Task Run, Pipeline Runs.
   name: build-app
 spec:
+  # Jeder Task hat einen optionalen Input.
   inputs:
    resources:
     - name: source
+      # Der Input kann Ressourcen enthalten, in der Regel die Quellen, aus denen entwickelt werden soll; 
+      # der Task definiert hier eine Quelle vom Typ Git, d. h. ein GitHub-Quell-Repository zum Klonen von Quellen.
       type: git
+   # Die Inputs können keine oder auch mehrere Parameter haben, die in Task Steps verwendet werden können.
    params:
    - name: contextDir
      description: Parameter Description
@@ -20,11 +25,13 @@ spec:
    - name: dockerFile
      description: Parameter Description
      default: src/main/docker/Dockerfile.jvm
+  # Tasks können einen optionalen Output definieren; hier erstellt der Task ein Image für einen Java-Anwendungscontainer aus Quellen.
   outputs:
    resources:
     - name: builtImage
       type: image
   steps:
+   # build-sources führt einen Maven Build aus, um die Anwendungsquellen zu erstellen.
    - name: build-sources
      image: quay.io/rhdevelopers/quarkus-java-builder:graal-19.1.1
      workingDir: "/workspace/source/${inputs.params.contextDir}"
@@ -46,6 +53,7 @@ spec:
          memory: 2Gi
      securityContext:
        privileged: true
+   # build-image führt einen Buildah Build aus, um das Container-Image der Anwendung aus entwickelten Java-Anwendungsartefakten zu erstellen.
    - name: build-image
      image: quay.io/buildah/stable
      workingDir: "/workspace/source/${inputs.params.contextDir}"
@@ -62,6 +70,7 @@ spec:
      volumeMounts:
      - name: varlibc
        mountPath: /var/lib/containers
+   # build-push verschiebt das erstellte Container-Image in die interne oder externe Container-Registry.
    - name: build-push
      image: quay.io/buildah/stable
      workingDir: "/workspace/source/${inputs.params.contextDir}"
